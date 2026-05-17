@@ -14,6 +14,10 @@ class EditorPanel(ctk.CTkFrame):
         self.title_history_index = -1
         self._title_undoing = False
 
+        # Para el feedback de guardado
+        self._original_date_text = ""
+        self._feedback_after_id = None
+
         self.title_entry = ctk.CTkEntry(self, 
             placeholder_text="Note title...", font=ctk.CTkFont(size=17, weight="bold"), height=38, fg_color=purple_editor, 
             text_color="white", border_color=purple_bright)
@@ -23,7 +27,6 @@ class EditorPanel(ctk.CTkFrame):
         self.title_entry.bind("<Control-z>", lambda e: self._title_undo())
         self.title_entry.bind("<Control-y>", lambda e: self._title_redo())
         self.title_entry.bind("<Control-s>", lambda e: self._trigger_save())
-        # Enter para ir al cuerpo de la nota
         self.title_entry.bind("<Return>", lambda e: self._focus_textbox())
 
         self.date_label = ctk.CTkLabel(self, 
@@ -59,6 +62,23 @@ class EditorPanel(ctk.CTkFrame):
 
         self.textbox.bind("<KeyRelease>", lambda e: self._count())
         self.title_entry.bind("<KeyRelease>", lambda e: self._on_title_keyrelease())
+
+    # --- Feedback visual de guardado ---
+
+    def set_date(self, date_str):
+        self._original_date_text = f"Editing • {date_str}"
+        self.date_label.configure(text=self._original_date_text, text_color=purple_text)
+
+    def show_saved_feedback(self):
+        if self._feedback_after_id is not None:
+            self.after_cancel(self._feedback_after_id)
+        
+        self.date_label.configure(text="Saved successfully", text_color="#4ade80")
+        self._feedback_after_id = self.after(1500, self._restore_date_label)
+
+    def _restore_date_label(self):
+        self.date_label.configure(text=self._original_date_text, text_color=purple_text)
+        self._feedback_after_id = None
 
     # --- Enter desde el título al contenido ---
 
@@ -131,7 +151,8 @@ class EditorPanel(ctk.CTkFrame):
         self.title_entry.insert(0, note.get("title", ""))
         self.textbox.delete("0.0", "end")
         self.textbox.insert("0.0", note.get("content", ""))
-        self.date_label.configure(text=f"Editing • {note.get('date', '')}", text_color=purple_text)
+        self._original_date_text = f"Editing • {note.get('date', '')}"
+        self.date_label.configure(text=self._original_date_text, text_color=purple_text)
         self.title_history = [note.get("title", "")]
         self.title_history_index = 0
         self._count()
@@ -140,7 +161,8 @@ class EditorPanel(ctk.CTkFrame):
     def clear(self):
         self.title_entry.delete(0, "end")
         self.textbox.delete("0.0", "end")
-        self.date_label.configure(text="New note", text_color=purple_text)
+        self._original_date_text = "New note"
+        self.date_label.configure(text=self._original_date_text, text_color=purple_text)
         self.title_history = [""]
         self.title_history_index = 0
         self._count()

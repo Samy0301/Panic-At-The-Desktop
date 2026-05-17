@@ -70,10 +70,15 @@ class NotesApp(ctk.CTk):
         if self.editing_index is not None:
             self.storage.update(self.editing_index, title, content)
         else:
-            self.storage.create(title, content)
+            self.editing_index = self.storage.create(title, content)
 
-        self.sidebar.render()
-        self.show_welcome()
+        # Actualizar sidebar y mantener la nota seleccionada
+        self.sidebar.set_active(self.editing_index)
+
+        # Mostrar feedback y actualizar la fecha en el editor
+        note = self.storage.get(self.editing_index)
+        self.editor.set_date(note.get("date", ""))
+        self.editor.show_saved_feedback()
 
     def action_cancel(self):
         self.show_welcome()
