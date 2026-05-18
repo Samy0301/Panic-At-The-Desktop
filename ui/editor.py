@@ -72,7 +72,6 @@ class EditorPanel(ctk.CTkFrame):
     def show_saved_feedback(self):
         if self._feedback_after_id is not None:
             self.after_cancel(self._feedback_after_id)
-        
         self.date_label.configure(text="Saved successfully", text_color="#4ade80")
         self._feedback_after_id = self.after(1500, self._restore_date_label)
 
@@ -86,7 +85,7 @@ class EditorPanel(ctk.CTkFrame):
         self.textbox.focus()
         return "break"
 
-    # --- Guardar con Ctrl+S ---
+    # --- Guardar manual con Ctrl+S ---
 
     def _trigger_save(self):
         self.on_save()

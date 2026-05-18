@@ -25,6 +25,9 @@ class NotesApp(ctk.CTk):
         self._build_ui()
         self.show_welcome()
 
+        # Ctrl+N funciona desde cualquier parte de la app
+        self.bind_all("<Control-n>", lambda e: self.action_new())
+
     def _build_ui(self):
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
@@ -72,10 +75,8 @@ class NotesApp(ctk.CTk):
         else:
             self.editing_index = self.storage.create(title, content)
 
-        # Actualizar sidebar y mantener la nota seleccionada
         self.sidebar.set_active(self.editing_index)
 
-        # Mostrar feedback y actualizar la fecha en el editor
         note = self.storage.get(self.editing_index)
         self.editor.set_date(note.get("date", ""))
         self.editor.show_saved_feedback()
