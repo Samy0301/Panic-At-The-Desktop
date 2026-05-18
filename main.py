@@ -2,7 +2,7 @@ import customtkinter as ctk
 from tkinter import messagebox
 
 from config import *
-from core.storage import NotesStorage
+from core.storage import NotesStorage, AppSettings
 from ui.sidebar import Sidebar
 from ui.editor import EditorPanel
 from ui.welcome import WelcomePanel
@@ -20,12 +20,19 @@ class NotesApp(ctk.CTk):
         self.configure(fg_color = purple_bg)
 
         self.storage = NotesStorage()
+        self.settings = AppSettings()
         self.editing_index = None
 
         self._build_ui()
         self.show_welcome()
 
         self.bind_all("<Control-n>", lambda e: self.action_new())
+        self.protocol("WM_DELETE_WINDOW", self._on_close)
+
+    def _on_close(self):
+        if self.editor.winfo_viewable():
+            self.action_save()
+        self.destroy()
 
     def _build_ui(self):
         self.grid_columnconfigure(1, weight=1)
@@ -42,7 +49,8 @@ class NotesApp(ctk.CTk):
 
         self.welcome = WelcomePanel(self.right_panel)
         self.editor = EditorPanel(self.right_panel, 
-            on_save = self.action_save, on_cancel = self.action_cancel)
+            on_save = self.action_save, on_cancel = self.action_cancel,
+            settings = self.settings)
 
     def show_welcome(self):
         self.editor.grid_remove()
@@ -71,10 +79,10 @@ class NotesApp(ctk.CTk):
 
         if self.editing_index is not None:
             self.storage.update(self.editing_index, title, content)
-            self.sidebar.update_note(self.editing_index)   # solo cambia texto, no reconstruye
+            self.sidebar.update_note(self.editing_index)
         else:
             self.editing_index = self.storage.create(title, content)
-            self.sidebar.insert_note_at_top()                # inserta arriba sin reconstruir
+            self.sidebar.insert_note_at_top()
 
         self.sidebar.set_active(self.editing_index)
 
@@ -88,7 +96,7 @@ class NotesApp(ctk.CTk):
     def action_delete(self, index):
         if messagebox.askyesno("Delete", "Are you sure you want to delete this note?"):
             self.storage.delete(index)
-            self.sidebar.remove_note(index)   # borra solo ese frame
+            self.sidebar.remove_note(index)
             if self.editing_index == index:
                 self.show_welcome()
 

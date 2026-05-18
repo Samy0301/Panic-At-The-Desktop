@@ -1,7 +1,7 @@
 import json
 import os
 from datetime import datetime
-from config import notes_file
+from config import notes_file, settings_file
 
 
 class NotesStorage:
@@ -59,3 +59,28 @@ class NotesStorage:
             self.save()
             return self.notes[index]["pinned"]
         return False
+
+
+class AppSettings:
+    def __init__(self):
+        self.data = {}
+        self.load()
+
+    def load(self):
+        if os.path.exists(settings_file):
+            try:
+                with open(settings_file, "r", encoding="utf-8") as f:
+                    self.data = json.load(f)
+            except:
+                self.data = {}
+
+    def save(self):
+        with open(settings_file, "w", encoding="utf-8") as f:
+            json.dump(self.data, f, ensure_ascii=False, indent=2)
+
+    def get(self, key, default=None):
+        return self.data.get(key, default)
+
+    def set(self, key, value):
+        self.data[key] = value
+        self.save()

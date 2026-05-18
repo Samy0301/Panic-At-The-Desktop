@@ -6,6 +6,7 @@ _base = os.environ.get("APPDATA", os.path.expanduser("~")) if sys.platform == "w
 app_folder = os.path.join(_base, "NotasApp")
 os.makedirs(app_folder, exist_ok=True)
 notes_file = os.path.join(app_folder, "mis_notas.json")
+settings_file = os.path.join(app_folder, "settings.json")
 
 # Purple palette
 purple_bg      = "#1a0a2e"

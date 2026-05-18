@@ -4,41 +4,57 @@ from config import *
 
 
 class EditorPanel(ctk.CTkFrame):
-    def __init__(self, parent, on_save, on_cancel):
+    def __init__(self, parent, on_save, on_cancel, settings=None):
         super().__init__(parent, fg_color=purple_bg)
         self.on_save = on_save
         self.on_cancel = on_cancel
+        self.settings = settings
 
+        # --- Historial manual para el título ---
         self.title_history = []
         self.title_history_index = -1
         self._title_undoing = False
+
+        # --- Tamaños de fuente (persistidos) ---
+        self.title_font_size = self.settings.get("title_font_size", 17) if self.settings else 17
+        self.text_font_size = self.settings.get("editor_font_size", 15) if self.settings else 15
+
+        # Para el feedback de guardado
         self._original_date_text = ""
         self._feedback_after_id = None
 
         self.title_entry = ctk.CTkEntry(self, 
-            placeholder_text="Note title...", font=ctk.CTkFont(size=17, weight="bold"), height=38, fg_color=purple_editor, 
+            placeholder_text="Note title...", font=ctk.CTkFont(size=self.title_font_size, weight="bold"), height=38, fg_color=purple_editor, 
             text_color="white", border_color=purple_bright)
         self.title_entry.pack(fill="x", padx=10, pady=(10, 5))
 
+        # Binds del título
         self.title_entry.bind("<Control-z>", lambda e: self._title_undo())
         self.title_entry.bind("<Control-y>", lambda e: self._title_redo())
         self.title_entry.bind("<Control-s>", lambda e: self._trigger_save())
         self.title_entry.bind("<Return>", lambda e: self._focus_textbox())
+        self.title_entry.bind("<Control-minus>", lambda e: self._decrease_font())
+        self.title_entry.bind("<Control-plus>", lambda e: self._increase_font())
+        self.title_entry.bind("<Control-equal>", lambda e: self._increase_font())
 
         self.date_label = ctk.CTkLabel(self, 
             text="", font=ctk.CTkFont(size=11), text_color="#a688c5")
         self.date_label.pack(anchor="w", padx=10)
 
         self.textbox = ctk.CTkTextbox(self,
-            wrap = "word", font=ctk.CTkFont(family="Consolas", size=15), fg_color=purple_editor, text_color="#e0d5f0",
+            wrap = "word", font=ctk.CTkFont(family="Consolas", size=self.text_font_size), fg_color=purple_editor, text_color="#e0d5f0",
             corner_radius=8, border_color=purple_bright, border_width=1)
         self.textbox.pack(fill="both", expand=True, padx=10, pady=10)
 
+        # Binds del contenido
         self.textbox._textbox.configure(undo=True, maxundo=-1)
         self.textbox.bind("<Control-z>", lambda e: self._text_undo())
         self.textbox.bind("<Control-y>", lambda e: self._text_redo())
         self.textbox.bind("<Control-Shift-z>", lambda e: self._text_redo())
         self.textbox.bind("<Control-s>", lambda e: self._trigger_save())
+        self.textbox.bind("<Control-minus>", lambda e: self._decrease_font())
+        self.textbox.bind("<Control-plus>", lambda e: self._increase_font())
+        self.textbox.bind("<Control-equal>", lambda e: self._increase_font())
 
         btn_frame = ctk.CTkFrame(self, fg_color="transparent")
         btn_frame.pack(fill="x", padx=10, pady=(0, 10))
@@ -46,6 +62,22 @@ class EditorPanel(ctk.CTkFrame):
         self.info_label = ctk.CTkLabel(btn_frame, 
             text="0 words", font=ctk.CTkFont(size=11), text_color="#a688c5")
         self.info_label.pack(side="left")
+
+        # --- Controles de zoom ---
+        zoom_frame = ctk.CTkFrame(btn_frame, fg_color="transparent")
+        zoom_frame.pack(side="left", padx=(12, 0))
+
+        ctk.CTkButton(zoom_frame, text="-", width=28, height=26,
+            fg_color="transparent", border_width=1, border_color=purple_bright,
+            text_color="white", hover_color=purple_hov_sel,
+            font=ctk.CTkFont(size=13, weight="bold"),
+            command=self._decrease_font).pack(side="left", padx=2)
+
+        ctk.CTkButton(zoom_frame, text="+", width=28, height=26,
+            fg_color="transparent", border_width=1, border_color=purple_bright,
+            text_color="white", hover_color=purple_hov_sel,
+            font=ctk.CTkFont(size=13, weight="bold"),
+            command=self._increase_font).pack(side="left", padx=2)
 
         ctk.CTkButton(btn_frame, 
             text="Cancel", width=100, fg_color="transparent", border_width=2, border_color=purple_bright, text_color="white",
@@ -57,6 +89,31 @@ class EditorPanel(ctk.CTkFrame):
 
         self.textbox.bind("<KeyRelease>", lambda e: self._count())
         self.title_entry.bind("<KeyRelease>", lambda e: self._on_title_keyrelease())
+
+    # --- Zoom de fuente ---
+
+    def _increase_font(self):
+        if self.text_font_size < 32:
+            self.text_font_size += 1
+            self.title_font_size += 1
+            self._apply_font()
+        return "break"
+
+    def _decrease_font(self):
+        if self.text_font_size > 8:
+            self.text_font_size -= 1
+            self.title_font_size -= 1
+            self._apply_font()
+        return "break"
+
+    def _apply_font(self):
+        self.textbox.configure(font=ctk.CTkFont(family="Consolas", size=self.text_font_size))
+        self.title_entry.configure(font=ctk.CTkFont(size=self.title_font_size, weight="bold"))
+        if self.settings:
+            self.settings.set("editor_font_size", self.text_font_size)
+            self.settings.set("title_font_size", self.title_font_size)
+
+    # --- Feedback visual de guardado ---
 
     def set_date(self, date_str):
         self._original_date_text = f"Editing • {date_str}"
@@ -72,13 +129,19 @@ class EditorPanel(ctk.CTkFrame):
         self.date_label.configure(text=self._original_date_text, text_color=purple_text)
         self._feedback_after_id = None
 
+    # --- Enter desde el título al contenido ---
+
     def _focus_textbox(self):
         self.textbox.focus()
         return "break"
 
+    # --- Guardar manual con Ctrl+S ---
+
     def _trigger_save(self):
         self.on_save()
         return "break"
+
+    # --- Undo/redo del TÍTULO ---
 
     def _on_title_keyrelease(self):
         if self._title_undoing:
@@ -114,6 +177,8 @@ class EditorPanel(ctk.CTkFrame):
             self._title_undoing = False
         return "break"
 
+    # --- Undo/redo del CONTENIDO ---
+
     def _text_undo(self):
         try:
             self.textbox._textbox.edit_undo()
@@ -127,6 +192,8 @@ class EditorPanel(ctk.CTkFrame):
         except tk.TclError:
             pass
         return "break"
+
+    # --- Resto del panel ---
 
     def load_note(self, note):
         self.title_entry.delete(0, "end")
