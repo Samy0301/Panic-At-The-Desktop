@@ -10,7 +10,7 @@ class Sidebar(ctk.CTkFrame):
         self.on_edit = on_edit
         self.on_delete = on_delete
         self.active_note = None
-        self.note_widgets = []   # referencias a los widgets de cada nota
+        self.note_widgets = []
 
         self.grid_propagate(False)
 
@@ -22,39 +22,123 @@ class Sidebar(ctk.CTkFrame):
             text="+ New note", font=ctk.CTkFont(size=15), height=38, fg_color=purple_accent, hover_color=purple_hov_sel,
             command=self.on_new).pack(fill="x", padx=12, pady=(0, 10))
 
+        # --- Búsqueda en vivo ---
+        self.search_var = ctk.StringVar()
+        
+        search_frame = ctk.CTkFrame(self, fg_color=purple_editor, height=32, corner_radius=6, border_width=1, border_color=purple_bright)
+        search_frame.pack(fill="x", padx=12, pady=(0, 10))
+        search_frame.grid_propagate(False)
+        search_frame.grid_columnconfigure(0, weight=1)
+        search_frame.grid_rowconfigure(0, weight=1)
+        
+        self.search_entry = ctk.CTkEntry(search_frame,
+            font=ctk.CTkFont(size=13), fg_color="transparent",
+            text_color="white", border_width=0, textvariable=self.search_var)
+        self.search_entry.grid(row=0, column=0, sticky="nsew", padx=8)
+        
+        self.search_placeholder = ctk.CTkLabel(search_frame, text="Search",
+            font=ctk.CTkFont(size=13), text_color="#a688c5", fg_color="transparent")
+        self.search_placeholder.place(rely=0.5, anchor="w", x=8)
+        
+        self.search_var.trace_add("write", lambda *args: self._on_search_change())
+        self.search_entry.bind("<FocusIn>", lambda e: self._update_placeholder())
+        self.search_entry.bind("<FocusOut>", lambda e: self._update_placeholder())
+        self.search_entry.bind("<Escape>", lambda e: self.search_var.set(""))
+
         self.list_container = ctk.CTkScrollableFrame(self, fg_color=purple_frame, width=300)
         self.list_container.pack(fill="both", expand=True, padx=0, pady=5)
+        self.list_container.grid_columnconfigure(0, weight=1)
+
+        self.no_results_label = None
+        self.empty_label = None
 
         self.render()
 
-    # --- Render completo (solo al inicio o cuando no hay otra opción) ---
+    def _on_search_change(self):
+        self._update_placeholder()
+        self._apply_filter()
+
+    def _update_placeholder(self):
+        if self.search_var.get() == "":
+            try:
+                focused = self.focus_get()
+            except Exception:
+                focused = None
+            
+            if focused == self.search_entry._entry:
+                self.search_placeholder.place_forget()
+            else:
+                self.search_placeholder.place(rely=0.5, anchor="w", x=8)
+        else:
+            self.search_placeholder.place_forget()
+
+    # --- Filtro en vivo ---
+
+    def _apply_filter(self):
+        query = self.search_var.get().lower().strip()
+        visible_count = 0
+
+        for i, widgets in enumerate(self.note_widgets):
+            note = self.storage.get(i)
+            if not note:
+                continue
+
+            if query == "":
+                match = True
+            else:
+                title = note.get("title", "").lower()
+                content = note.get("content", "").lower()
+                match = query in title or query in content
+
+            frame = widgets["frame"]
+            if match:
+                frame.grid(row=frame.grid_row, column=0, sticky="ew", pady=15, padx=12)
+                visible_count += 1
+            else:
+                frame.grid_remove()
+
+        if not self.storage.notes:
+            pass
+        elif visible_count == 0:
+            if self.no_results_label is None or not self.no_results_label.winfo_exists():
+                self.no_results_label = ctk.CTkLabel(self.list_container,
+                    text="No matching notes.", text_color="#a688c5",
+                    font=ctk.CTkFont(size=14))
+            self.no_results_label.grid(row=0, column=0, pady=40)
+        else:
+            if self.no_results_label is not None and self.no_results_label.winfo_exists():
+                self.no_results_label.grid_remove()
+
+    # --- Render completo ---
 
     def render(self):
         for w in self.list_container.winfo_children():
             w.destroy()
         self.note_widgets.clear()
+        self.no_results_label = None
+        self.empty_label = None
 
         notes = self.storage.notes
         if not notes:
             self.empty_label = ctk.CTkLabel(self.list_container,
                 text="No saved notes.\n Click 'New note' to create one.",
                 text_color="#a688c5", font=ctk.CTkFont(size=14))
-            self.empty_label.pack(pady=40)
+            self.empty_label.grid(row=0, column=0, pady=40)
             return
 
         for i, note in enumerate(notes):
-            self._create_note_frame(i, note)
+            self._create_note_frame(i, note, grid_row=i)
 
         self._apply_highlight()
 
-    def _create_note_frame(self, index, note, before_widget=None):
-        frame = ctk.CTkFrame(self.list_container, fg_color=purple_frame)
-        frame.note_index = index   # índice "vivo" que podemos actualizar
+    def _create_note_frame(self, index, note, grid_row=None):
+        if grid_row is None:
+            grid_row = len(self.note_widgets)
 
-        if before_widget:
-            frame.pack(fill="x", pady=15, padx=12, before=before_widget)
-        else:
-            frame.pack(fill="x", pady=15, padx=12)
+        frame = ctk.CTkFrame(self.list_container, fg_color=purple_frame)
+        frame.note_index = index
+        frame.grid_row = grid_row
+        frame.grid(row=grid_row, column=0, sticky="ew", pady=15, padx=12)
 
         widgets = {"frame": frame, "title": None, "preview": None, "date": None}
 
@@ -87,13 +171,8 @@ class Sidebar(ctk.CTkFrame):
             text="🗑", width=32, height=26, fg_color="transparent", hover_color="#8B0000",
             font=ctk.CTkFont(size=14), command=lambda f=frame: self._delete_frame(f)).pack(side="right")
 
-        if before_widget:
-            self.note_widgets.insert(0, widgets)
-        else:
-            self.note_widgets.append(widgets)
+        self.note_widgets.insert(grid_row, widgets)
         return widgets
-
-    # --- Acciones por frame (usando el índice "vivo") ---
 
     def _select_frame(self, frame):
         self._select(frame.note_index)
@@ -122,10 +201,7 @@ class Sidebar(ctk.CTkFrame):
         self.active_note = None
         self._apply_highlight()
 
-    # --- Actualizaciones parciales (sin reconstruir) ---
-
     def update_note(self, index):
-        """Cambia título, preview y fecha de una nota existente."""
         if 0 <= index < len(self.note_widgets):
             note = self.storage.get(index)
             if note:
@@ -136,34 +212,37 @@ class Sidebar(ctk.CTkFrame):
                     preview += "..."
                 w["preview"].configure(text=preview or " ")
                 w["date"].configure(text=note.get("date", ""))
+                self._apply_filter()
 
     def insert_note_at_top(self):
-        """Inserta una nota nueva arriba de todo sin tocar las demás."""
-        if hasattr(self, 'empty_label') and self.empty_label.winfo_exists():
+        if self.empty_label is not None and self.empty_label.winfo_exists():
             self.empty_label.destroy()
-            delattr(self, 'empty_label')
+            self.empty_label = None
 
-        # Los índices de las notas existentes suben 1
         for widgets in self.note_widgets:
-            widgets["frame"].note_index += 1
+            frame = widgets["frame"]
+            frame.grid_row += 1
+            frame.grid_configure(row=frame.grid_row)
 
         note = self.storage.get(0)
         if note:
-            before = self.note_widgets[0]["frame"] if self.note_widgets else None
-            self._create_note_frame(0, note, before_widget=before)
+            self._create_note_frame(0, note, grid_row=0)
 
             if self.active_note is not None:
                 self.active_note += 1
+
+            for i, w in enumerate(self.note_widgets):
+                w["frame"].note_index = i
+
+            self._apply_filter()
             self._apply_highlight()
 
     def remove_note(self, index):
-        """Elimina una nota y reindexa las que quedan."""
         if 0 <= index < len(self.note_widgets):
             widgets = self.note_widgets.pop(index)
             widgets["frame"].destroy()
 
-            # Reindexar las siguientes
-            for i, w in enumerate(self.note_widgets[index:], start=index):
+            for i, w in enumerate(self.note_widgets):
                 w["frame"].note_index = i
 
             if self.active_note == index:
@@ -171,6 +250,7 @@ class Sidebar(ctk.CTkFrame):
             elif self.active_note is not None and self.active_note > index:
                 self.active_note -= 1
 
+            self._apply_filter()
             self._apply_highlight()
 
             if not self.note_widgets:
