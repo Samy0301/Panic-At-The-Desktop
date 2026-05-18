@@ -10,16 +10,13 @@ class EditorPanel(ctk.CTkFrame):
         self.on_cancel = on_cancel
         self.settings = settings
 
-        # --- Historial manual para el título ---
         self.title_history = []
         self.title_history_index = -1
         self._title_undoing = False
 
-        # --- Tamaños de fuente (persistidos) ---
         self.title_font_size = self.settings.get("title_font_size", 17) if self.settings else 17
         self.text_font_size = self.settings.get("editor_font_size", 15) if self.settings else 15
 
-        # Para el feedback de guardado
         self._original_date_text = ""
         self._feedback_after_id = None
 
@@ -28,7 +25,6 @@ class EditorPanel(ctk.CTkFrame):
             text_color="white", border_color=purple_bright)
         self.title_entry.pack(fill="x", padx=10, pady=(10, 5))
 
-        # Binds del título
         self.title_entry.bind("<Control-z>", lambda e: self._title_undo())
         self.title_entry.bind("<Control-y>", lambda e: self._title_redo())
         self.title_entry.bind("<Control-s>", lambda e: self._trigger_save())
@@ -46,7 +42,6 @@ class EditorPanel(ctk.CTkFrame):
             corner_radius=8, border_color=purple_bright, border_width=1)
         self.textbox.pack(fill="both", expand=True, padx=10, pady=10)
 
-        # Binds del contenido
         self.textbox._textbox.configure(undo=True, maxundo=-1)
         self.textbox.bind("<Control-z>", lambda e: self._text_undo())
         self.textbox.bind("<Control-y>", lambda e: self._text_redo())
@@ -63,7 +58,6 @@ class EditorPanel(ctk.CTkFrame):
             text="0 words", font=ctk.CTkFont(size=11), text_color="#a688c5")
         self.info_label.pack(side="left")
 
-        # --- Controles de zoom ---
         zoom_frame = ctk.CTkFrame(btn_frame, fg_color="transparent")
         zoom_frame.pack(side="left", padx=(12, 0))
 
@@ -90,7 +84,6 @@ class EditorPanel(ctk.CTkFrame):
         self.textbox.bind("<KeyRelease>", lambda e: self._count())
         self.title_entry.bind("<KeyRelease>", lambda e: self._on_title_keyrelease())
 
-    # --- Zoom de fuente ---
 
     def _increase_font(self):
         if self.text_font_size < 32:
@@ -113,7 +106,6 @@ class EditorPanel(ctk.CTkFrame):
             self.settings.set("editor_font_size", self.text_font_size)
             self.settings.set("title_font_size", self.title_font_size)
 
-    # --- Feedback visual de guardado ---
 
     def set_date(self, date_str):
         self._original_date_text = f"Editing • {date_str}"
@@ -129,19 +121,16 @@ class EditorPanel(ctk.CTkFrame):
         self.date_label.configure(text=self._original_date_text, text_color=purple_text)
         self._feedback_after_id = None
 
-    # --- Enter desde el título al contenido ---
 
     def _focus_textbox(self):
         self.textbox.focus()
         return "break"
 
-    # --- Guardar manual con Ctrl+S ---
 
     def _trigger_save(self):
         self.on_save()
         return "break"
 
-    # --- Undo/redo del TÍTULO ---
 
     def _on_title_keyrelease(self):
         if self._title_undoing:
@@ -177,7 +166,6 @@ class EditorPanel(ctk.CTkFrame):
             self._title_undoing = False
         return "break"
 
-    # --- Undo/redo del CONTENIDO ---
 
     def _text_undo(self):
         try:
@@ -193,7 +181,6 @@ class EditorPanel(ctk.CTkFrame):
             pass
         return "break"
 
-    # --- Resto del panel ---
 
     def load_note(self, note):
         self.title_entry.delete(0, "end")

@@ -22,7 +22,6 @@ class Sidebar(ctk.CTkFrame):
             text="+ New note", font=ctk.CTkFont(size=15), height=38, fg_color=purple_accent, hover_color=purple_hov_sel,
             command=self.on_new).pack(fill="x", padx=12, pady=(0, 10))
 
-        # --- Búsqueda en vivo ---
         self.search_var = ctk.StringVar()
         
         search_frame = ctk.CTkFrame(self, fg_color=purple_editor, height=32, corner_radius=6, border_width=1, border_color=purple_bright)
@@ -72,7 +71,6 @@ class Sidebar(ctk.CTkFrame):
         else:
             self.search_placeholder.place_forget()
 
-    # --- Orden visual (pinned primero) ---
 
     def _get_visual_order(self):
         order = []
@@ -92,7 +90,6 @@ class Sidebar(ctk.CTkFrame):
                 w["frame"].grid_row = visual_pos
                 w["frame"].grid_configure(row=visual_pos)
 
-    # --- Filtro en vivo ---
 
     def _apply_filter(self):
         query = self.search_var.get().lower().strip()
@@ -129,7 +126,6 @@ class Sidebar(ctk.CTkFrame):
             if self.no_results_label is not None and self.no_results_label.winfo_exists():
                 self.no_results_label.grid_remove()
 
-    # --- Render completo ---
 
     def render(self):
         for w in self.list_container.winfo_children():
@@ -188,7 +184,6 @@ class Sidebar(ctk.CTkFrame):
         lbl_date.pack(side="left")
         widgets["date"] = lbl_date
 
-        # Botón pin/unpin con emoji
         is_pinned = note.get("pinned", False)
         pin_btn = ctk.CTkButton(bottom, 
             text="❎" if is_pinned else "📌", width=32, height=26,
@@ -204,8 +199,6 @@ class Sidebar(ctk.CTkFrame):
 
         self.note_widgets.insert(list_index, widgets)
         return widgets
-
-    # --- Acciones por frame ---
 
     def _select_frame(self, frame):
         self._select(frame.note_index)
