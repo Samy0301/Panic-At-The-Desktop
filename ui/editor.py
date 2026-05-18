@@ -122,7 +122,7 @@ class EditorPanel(ctk.CTkFrame):
     def show_saved_feedback(self):
         if self._feedback_after_id is not None:
             self.after_cancel(self._feedback_after_id)
-        self.date_label.configure(text="Saved successfully", text_color="#4ade80")
+        self.date_label.configure(text="Saved successfully", text_color=purple_text)
         self._feedback_after_id = self.after(1500, self._restore_date_label)
 
     def _restore_date_label(self):

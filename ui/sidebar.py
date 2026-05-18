@@ -75,7 +75,6 @@ class Sidebar(ctk.CTkFrame):
     # --- Orden visual (pinned primero) ---
 
     def _get_visual_order(self):
-        """Devuelve lista de storage indices ordenados: pinned primero, luego unpinned."""
         order = []
         for i, note in enumerate(self.storage.notes):
             if note.get("pinned", False):
@@ -86,7 +85,6 @@ class Sidebar(ctk.CTkFrame):
         return order
 
     def _reposition_all(self):
-        """Reasigna grid_row visual sin destruir widgets."""
         order = self._get_visual_order()
         for visual_pos, storage_idx in enumerate(order):
             if 0 <= storage_idx < len(self.note_widgets):
@@ -190,13 +188,13 @@ class Sidebar(ctk.CTkFrame):
         lbl_date.pack(side="left")
         widgets["date"] = lbl_date
 
-        # Botón pin/unpin
+        # Botón pin/unpin con emoji
         is_pinned = note.get("pinned", False)
         pin_btn = ctk.CTkButton(bottom, 
-            text="unpin" if is_pinned else "pin", width=45, height=26,
+            text="❎" if is_pinned else "📌", width=32, height=26,
             fg_color=purple_bright if is_pinned else "transparent",
             hover_color=purple_hov_sel, text_color="white",
-            font=ctk.CTkFont(size=11), command=lambda f=frame: self._toggle_pin_frame(f))
+            font=ctk.CTkFont(size=14), command=lambda f=frame: self._toggle_pin_frame(f))
         pin_btn.pack(side="right", padx=(0, 5))
         widgets["pin_btn"] = pin_btn
 
@@ -220,7 +218,7 @@ class Sidebar(ctk.CTkFrame):
         for w in self.note_widgets:
             if w["frame"] == frame:
                 w["pin_btn"].configure(
-                    text="unpin" if new_state else "pin",
+                    text="❎" if new_state else "📌",
                     fg_color=purple_bright if new_state else "transparent"
                 )
                 break
