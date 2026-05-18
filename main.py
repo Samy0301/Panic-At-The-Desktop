@@ -25,7 +25,6 @@ class NotesApp(ctk.CTk):
         self._build_ui()
         self.show_welcome()
 
-        # Ctrl+N funciona desde cualquier parte de la app
         self.bind_all("<Control-n>", lambda e: self.action_new())
 
     def _build_ui(self):
@@ -72,8 +71,10 @@ class NotesApp(ctk.CTk):
 
         if self.editing_index is not None:
             self.storage.update(self.editing_index, title, content)
+            self.sidebar.update_note(self.editing_index)   # solo cambia texto, no reconstruye
         else:
             self.editing_index = self.storage.create(title, content)
+            self.sidebar.insert_note_at_top()                # inserta arriba sin reconstruir
 
         self.sidebar.set_active(self.editing_index)
 
@@ -87,9 +88,9 @@ class NotesApp(ctk.CTk):
     def action_delete(self, index):
         if messagebox.askyesno("Delete", "Are you sure you want to delete this note?"):
             self.storage.delete(index)
+            self.sidebar.remove_note(index)   # borra solo ese frame
             if self.editing_index == index:
                 self.show_welcome()
-            self.sidebar.render()
 
 
 if __name__ == "__main__":

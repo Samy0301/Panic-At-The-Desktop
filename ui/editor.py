@@ -9,12 +9,9 @@ class EditorPanel(ctk.CTkFrame):
         self.on_save = on_save
         self.on_cancel = on_cancel
 
-        # --- Historial manual para el título ---
         self.title_history = []
         self.title_history_index = -1
         self._title_undoing = False
-
-        # Para el feedback de guardado
         self._original_date_text = ""
         self._feedback_after_id = None
 
@@ -23,7 +20,6 @@ class EditorPanel(ctk.CTkFrame):
             text_color="white", border_color=purple_bright)
         self.title_entry.pack(fill="x", padx=10, pady=(10, 5))
 
-        # Binds del título
         self.title_entry.bind("<Control-z>", lambda e: self._title_undo())
         self.title_entry.bind("<Control-y>", lambda e: self._title_redo())
         self.title_entry.bind("<Control-s>", lambda e: self._trigger_save())
@@ -38,7 +34,6 @@ class EditorPanel(ctk.CTkFrame):
             corner_radius=8, border_color=purple_bright, border_width=1)
         self.textbox.pack(fill="both", expand=True, padx=10, pady=10)
 
-        # Binds del contenido
         self.textbox._textbox.configure(undo=True, maxundo=-1)
         self.textbox.bind("<Control-z>", lambda e: self._text_undo())
         self.textbox.bind("<Control-y>", lambda e: self._text_redo())
@@ -63,8 +58,6 @@ class EditorPanel(ctk.CTkFrame):
         self.textbox.bind("<KeyRelease>", lambda e: self._count())
         self.title_entry.bind("<KeyRelease>", lambda e: self._on_title_keyrelease())
 
-    # --- Feedback visual de guardado ---
-
     def set_date(self, date_str):
         self._original_date_text = f"Editing • {date_str}"
         self.date_label.configure(text=self._original_date_text, text_color=purple_text)
@@ -79,19 +72,13 @@ class EditorPanel(ctk.CTkFrame):
         self.date_label.configure(text=self._original_date_text, text_color=purple_text)
         self._feedback_after_id = None
 
-    # --- Enter desde el título al contenido ---
-
     def _focus_textbox(self):
         self.textbox.focus()
         return "break"
 
-    # --- Guardar manual con Ctrl+S ---
-
     def _trigger_save(self):
         self.on_save()
         return "break"
-
-    # --- Undo/redo del TÍTULO ---
 
     def _on_title_keyrelease(self):
         if self._title_undoing:
@@ -127,8 +114,6 @@ class EditorPanel(ctk.CTkFrame):
             self._title_undoing = False
         return "break"
 
-    # --- Undo/redo del CONTENIDO ---
-
     def _text_undo(self):
         try:
             self.textbox._textbox.edit_undo()
@@ -142,8 +127,6 @@ class EditorPanel(ctk.CTkFrame):
         except tk.TclError:
             pass
         return "break"
-
-    # --- Resto del panel ---
 
     def load_note(self, note):
         self.title_entry.delete(0, "end")
