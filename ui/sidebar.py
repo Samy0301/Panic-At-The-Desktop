@@ -72,6 +72,28 @@ class Sidebar(ctk.CTkFrame):
         else:
             self.search_placeholder.place_forget()
 
+    # --- Orden visual (pinned primero) ---
+
+    def _get_visual_order(self):
+        """Devuelve lista de storage indices ordenados: pinned primero, luego unpinned."""
+        order = []
+        for i, note in enumerate(self.storage.notes):
+            if note.get("pinned", False):
+                order.append(i)
+        for i, note in enumerate(self.storage.notes):
+            if not note.get("pinned", False):
+                order.append(i)
+        return order
+
+    def _reposition_all(self):
+        """Reasigna grid_row visual sin destruir widgets."""
+        order = self._get_visual_order()
+        for visual_pos, storage_idx in enumerate(order):
+            if 0 <= storage_idx < len(self.note_widgets):
+                w = self.note_widgets[storage_idx]
+                w["frame"].grid_row = visual_pos
+                w["frame"].grid_configure(row=visual_pos)
+
     # --- Filtro en vivo ---
 
     def _apply_filter(self):
@@ -127,20 +149,21 @@ class Sidebar(ctk.CTkFrame):
             return
 
         for i, note in enumerate(notes):
-            self._create_note_frame(i, note, grid_row=i)
+            self._create_note_frame(i, note, list_index=i)
 
+        self._reposition_all()
         self._apply_highlight()
 
-    def _create_note_frame(self, index, note, grid_row=None):
-        if grid_row is None:
-            grid_row = len(self.note_widgets)
+    def _create_note_frame(self, index, note, list_index=None):
+        if list_index is None:
+            list_index = len(self.note_widgets)
 
         frame = ctk.CTkFrame(self.list_container, fg_color=purple_frame)
         frame.note_index = index
-        frame.grid_row = grid_row
-        frame.grid(row=grid_row, column=0, sticky="ew", pady=15, padx=12)
+        frame.grid_row = list_index
+        frame.grid(row=list_index, column=0, sticky="ew", pady=15, padx=12)
 
-        widgets = {"frame": frame, "title": None, "preview": None, "date": None}
+        widgets = {"frame": frame, "title": None, "preview": None, "date": None, "pin_btn": None}
 
         frame.bind("<Button-1>", lambda e, f=frame: self._select_frame(f))
 
@@ -167,12 +190,24 @@ class Sidebar(ctk.CTkFrame):
         lbl_date.pack(side="left")
         widgets["date"] = lbl_date
 
+        # Botón pin/unpin
+        is_pinned = note.get("pinned", False)
+        pin_btn = ctk.CTkButton(bottom, 
+            text="unpin" if is_pinned else "pin", width=45, height=26,
+            fg_color=purple_bright if is_pinned else "transparent",
+            hover_color=purple_hov_sel, text_color="white",
+            font=ctk.CTkFont(size=11), command=lambda f=frame: self._toggle_pin_frame(f))
+        pin_btn.pack(side="right", padx=(0, 5))
+        widgets["pin_btn"] = pin_btn
+
         ctk.CTkButton(bottom, 
             text="🗑", width=32, height=26, fg_color="transparent", hover_color="#8B0000",
             font=ctk.CTkFont(size=14), command=lambda f=frame: self._delete_frame(f)).pack(side="right")
 
-        self.note_widgets.insert(grid_row, widgets)
+        self.note_widgets.insert(list_index, widgets)
         return widgets
+
+    # --- Acciones por frame ---
 
     def _select_frame(self, frame):
         self._select(frame.note_index)
@@ -180,11 +215,29 @@ class Sidebar(ctk.CTkFrame):
     def _delete_frame(self, frame):
         self.on_delete(frame.note_index)
 
+    def _toggle_pin_frame(self, frame):
+        new_state = self.storage.toggle_pin(frame.note_index)
+        for w in self.note_widgets:
+            if w["frame"] == frame:
+                w["pin_btn"].configure(
+                    text="unpin" if new_state else "pin",
+                    fg_color=purple_bright if new_state else "transparent"
+                )
+                break
+        self._reposition_all()
+        self._apply_filter()
+        self._apply_highlight()
+
     def _apply_highlight(self):
-        for i, widgets in enumerate(self.note_widgets):
+        for widgets in self.note_widgets:
             frame = widgets["frame"]
-            if i == self.active_note:
+            note = self.storage.get(frame.note_index)
+            is_pinned = note.get("pinned", False) if note else False
+            
+            if frame.note_index == self.active_note:
                 frame.configure(fg_color=purple_hov_sel, border_width=2, border_color=purple_bright)
+            elif is_pinned:
+                frame.configure(fg_color=purple_frame, border_width=1, border_color=purple_bright)
             else:
                 frame.configure(fg_color=purple_frame, border_width=0, border_color=purple_frame)
 
@@ -220,20 +273,16 @@ class Sidebar(ctk.CTkFrame):
             self.empty_label = None
 
         for widgets in self.note_widgets:
-            frame = widgets["frame"]
-            frame.grid_row += 1
-            frame.grid_configure(row=frame.grid_row)
+            widgets["frame"].note_index += 1
 
         note = self.storage.get(0)
         if note:
-            self._create_note_frame(0, note, grid_row=0)
+            self._create_note_frame(0, note, list_index=0)
 
             if self.active_note is not None:
                 self.active_note += 1
 
-            for i, w in enumerate(self.note_widgets):
-                w["frame"].note_index = i
-
+            self._reposition_all()
             self._apply_filter()
             self._apply_highlight()
 
@@ -250,6 +299,7 @@ class Sidebar(ctk.CTkFrame):
             elif self.active_note is not None and self.active_note > index:
                 self.active_note -= 1
 
+            self._reposition_all()
             self._apply_filter()
             self._apply_highlight()
 

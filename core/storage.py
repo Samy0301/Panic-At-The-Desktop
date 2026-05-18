@@ -25,7 +25,8 @@ class NotesStorage:
         note = {
             "title": title,
             "content": content,
-            "date": datetime.now().strftime("%d/%m/%Y %H:%M")
+            "date": datetime.now().strftime("%d/%m/%Y %H:%M"),
+            "pinned": False
         }
         self.notes.insert(0, note)
         self.save()
@@ -33,10 +34,12 @@ class NotesStorage:
 
     def update(self, index, title, content):
         if 0 <= index < len(self.notes):
+            pinned = self.notes[index].get("pinned", False)
             self.notes[index] = {
                 "title": title,
                 "content": content,
-                "date": datetime.now().strftime("%d/%m/%Y %H:%M")
+                "date": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                "pinned": pinned
             }
             self.save()
 
@@ -49,3 +52,10 @@ class NotesStorage:
         if 0 <= index < len(self.notes):
             return self.notes[index]
         return None
+
+    def toggle_pin(self, index):
+        if 0 <= index < len(self.notes):
+            self.notes[index]["pinned"] = not self.notes[index].get("pinned", False)
+            self.save()
+            return self.notes[index]["pinned"]
+        return False
